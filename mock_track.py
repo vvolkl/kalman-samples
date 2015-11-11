@@ -15,7 +15,7 @@ MORITAT :: Mock Reconstruction and Pedagogical Tracking
  the curvature $\rho$ is connected to experimental quantities via
 
 \begin{equation}
- \rho [ \textnormal{cm} ] = \frac {p_T [ \textnormal {GeV}] { 0.003 \cdot q[ \textnormal [e] \cdot B [ \textnormal T ];
+ \rho [ \textnormal{cm} ] = \frac {p_T [ \textnormal {GeV}] } { 0.003 \cdot q[ \textnormal [e] \cdot B [ \textnormal T ] };
 \end{equation}
 
 [1] Andreas Salzburger and Dietmar Kuhn (dir.). A Parametrization for Fast
@@ -43,27 +43,6 @@ def perpendicular_vector(v):
 def rotate(axis, theta):
     return scipy.linalg.expm(np.cross(np.eye(3), axis/scipy.linalg.norm(axis)*theta))
 
-def position_derivative(x, t, B=0.3, radii=range(2,6), thickness=0.2,
-                        energy_loss=0., scattering_angle=0.00):
-    """
-    For odeint solver. x[:3] is the position and x[3:6] the velocity, using cartesian coordinates.
-    """
-    dx_dp = np.array([x[3], x[4], x[5], #change of position due to velocity
-                      -1 * B * x[4], B * x[3], 0]) # change of velocity due to magnetic field
-    print 'function call'
-    # crude collision check with detector
-    for radius in radii:
-        if radius < np.sqrt(x[0]**2 + x[1]**2) < radius + thickness:
-            print 'detector collision...', t, np.sqrt(x[0]**2 + x[1]**2)
-            # energy loss proportional to momentum 
-            dx_dp[3:6] = dx_dp[3:6] - energy_loss * dx_dp[0:3]
-            # multiple scattering leads to some arbitrary small rotation
-            r = rotate( perpendicular_vector(dx_dp[3:6]), scattering_angle )
-            dx_dp[3:6] = np.dot(r, dx_dp[3:6])
-            break
-    return dx_dp
-    
-#
 # add scattering noise
 #if abs(scattering_angle) > 1e-6:
 #    dx_dp[3:6] = np.dot( rotate(perpendicular_vector(dx_dp[3:6]), scattering_angle),
@@ -120,22 +99,55 @@ def fake_odeint(func, y0, t, Dfun=None):
         y.append(ig.integrate(tt))
     return np.array(y)
 
+
+def position_derivative(t, x, B=0.0):
+    """
+    For odeint solver. x[:3] is the position and x[3:6] the velocity, using cartesian coordinates.
+    """
+    dx_dp = np.array([x[3], x[4], x[5], #change of position due to velocity
+                      -1 * B * x[4], B * x[3], 0]) # change of velocity due to magnetic field
+    return dx_dp
+    
+
+
 def propagate(**kwargs):
     # set default arguments
     x0 = kwargs.pop('x0', [0, 0, 0])
     p0 = kwargs.pop('p0', [1, 1, 1])
     Dfun = kwargs.pop('Dfun', None)
-    time_points = kwargs.pop('time_points', (0, 20, 1000))
+    time_points = kwargs.pop('time_points', (0.001, 40, 100000))
+    radii = kwargs.pop('radii', range(2,6))
+    thickness = kwargs.pop('thickness', 0.001) 
+    energy_loss = kwargs.pop('energy_loss', 0.1) 
+    scattering_angle = kwargs.pop('scattering_angle', 0.01) 
     # times at which ode will be evaluated
     ig = scipy.integrate.ode(position_derivative, Dfun)
     ig.set_integrator('zvode',
                        method='bdf')
     ig.set_initial_value(x0 + p0, t=0.)
+    time_of_last_collision = 0 
     result = []
-    dt = 0.1
     for t in np.linspace(*time_points):
-        result.append(ig.integrate(ig.t + dt))
-    return result
+        delta_t = t - ig.t
+        time_of_last_collision += delta_t
+        particle_state = ig.integrate(t)
+        particle_state = particle_state.real
+        result.append(particle_state)
+        particle_radius = np.sqrt(result[-1][0]**2 + result[-1][1]**2).real
+        for radius in radii:
+            if (radius < particle_radius < radius + thickness and
+                time_of_last_collision > 0.01):
+                print 'detector collision...', t, particle_radius
+                # energy loss proportional to momentum 
+                _dp = particle_state[3:6]
+                _dp = _dp - energy_loss * _dp
+                # multiple scattering leads to some arbitrary small rotation
+                r = rotate( perpendicular_vector(_dp), scattering_angle )
+                _dp = np.dot(r, _dp)
+                ig.set_initial_value( list(particle_state[:3]) + list(_dp), t=t)
+                time_of_last_collision = 0 
+                break
+    return np.array(result)
 
 
 def helix(params, time_points=(0,10,1000)):
@@ -147,13 +159,14 @@ def helix(params, time_points=(0,10,1000)):
     x0 =  d0 * np.cos(phi0)
     y0 = d0 * np.sin(phi0)
     rho = 1. / q_pT
-    # cartestian coordinates of helix center
+    # cartesian coordinates of helix center
     xc = x0 - rho * np.cos(phi0) 
     yc = y0 - rho * np.sin(phi0)
     # generate real space points from track parameters
     x = xc + rho * np.cos(path_points + phi0)
     y = yc + rho * np.sin(path_points + phi0)
     return np.array([x, y, z]).T
+
 
 def helix_at_detector(params, radii=range(2,6)):
     track = helix(params)
