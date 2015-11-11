@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
 import scipy.linalg
-
+import itertools
 
 # http://codereview.stackexchange.com/questions/43928
 def perpendicular_vector(v):
@@ -66,13 +66,29 @@ def draw_detector(radii=range(2,6)):
     return fig, ax
 
 
-def detector_track_intersection(track, radii=range(2,6)):
+def detector_track_intersection(full_track, radii=range(2,6)):
     # convention: expect x, y coordinates in first two columns of track
-    track_radius = np.linalg.norm(track[:, :2], axis=1)
-    hit_indices = np.searchsorted(track_radius, radii)
-    hit_indices = hit_indices[hit_indices < track.shape[0]]
-    hits = track[hit_indices, :3]
-    return hits
+    # np.searchsorted expects data to be ordered
+    # so split it into segments that are assumed to be straight
+    result = []
+    num_segments = 20
+    l = full_track.shape[0]
+    segment_length = l / num_segments
+    for i in range(num_segments):
+        track_segment = full_track[ i * segment_length : (i+1) * segment_length, : ] 
+        track_radius = np.linalg.norm(track_segment[:, :2], axis=1)
+        hit_indices = np.searchsorted(track_radius, radii)
+        hit_indices = hit_indices[ hit_indices < track_segment.shape[0]]
+        hit_indices = hit_indices[ 0 < hit_indices ]
+        result.append(track_segment[hit_indices, :3])
+        if hit_indices.shape[0] == 0:
+            track_radius = np.linalg.norm(track_segment[::-1, :2], axis=1)
+            hit_indices = np.searchsorted(track_radius, radii)
+            hit_indices = hit_indices[ hit_indices < track_segment.shape[0]]
+            hit_indices = hit_indices[ 0 < hit_indices ]
+            result.append(track_segment[::-1, :3][hit_indices, :3])
+        
+    return np.concatenate(result) 
 
     
 def detector_response(track, radii=range(2,6), sigma=.1):
@@ -87,7 +103,7 @@ def detector_response(track, radii=range(2,6), sigma=.1):
     return hits
 
 
-def position_derivative(t, x, B=0.0):
+def position_derivative(t, x, B=0.3):
     """
     For odeint solver. x[:3] is the position and x[3:6] the velocity,
     using cartesian coordinates.
@@ -102,13 +118,13 @@ def position_derivative(t, x, B=0.0):
 def propagate(**kwargs):
     # set default arguments
     x0 = kwargs.pop('x0', [0, 0, 0])
-    p0 = kwargs.pop('p0', [1, 1, 1])
+    p0 = kwargs.pop('p0', [1, 0, 1])
     Dfun = kwargs.pop('Dfun', None)
     time_points = kwargs.pop('time_points', (0.001, 40, 100000))
     radii = kwargs.pop('radii', range(2,6))
     thickness = kwargs.pop('thickness', 0.001) 
-    energy_loss = kwargs.pop('energy_loss', 0.1) 
-    scattering_angle = kwargs.pop('scattering_angle', 0.01) 
+    energy_loss = kwargs.pop('energy_loss', 0.00) 
+    scattering_angle = kwargs.pop('scattering_angle', 0.00) 
     # set up ode integrator
     ig = scipy.integrate.ode(position_derivative, Dfun)
     ig.set_integrator('zvode',
