@@ -30,6 +30,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
 import scipy.linalg
 
+
 # http://codereview.stackexchange.com/questions/43928
 def perpendicular_vector(v):
     if v[1] == 0 and v[2] == 0:
@@ -39,20 +40,11 @@ def perpendicular_vector(v):
             return np.cross(v, np.random.rand(3))
     return np.cross(v, np.random.rand(3))
 
+
 # http://stackoverflow.com/questions/6802577
 def rotate(axis, theta):
     return scipy.linalg.expm(np.cross(np.eye(3), axis/scipy.linalg.norm(axis)*theta))
 
-# add scattering noise
-#if abs(scattering_angle) > 1e-6:
-#    dx_dp[3:6] = np.dot( rotate(perpendicular_vector(dx_dp[3:6]), scattering_angle),
-#                         dx_dp[3:6])
-def get_Bfield(x):
-    """
-    Mock magnetic field at real space location x --
-    no x dependence -> field constant
-    """
-    return [0, 0, 0.3]
 
 def draw_detector(radii=range(2,6)):
     fig = plt.figure()
@@ -73,6 +65,7 @@ def draw_detector(radii=range(2,6)):
             ax.plot_surface(Xc, _yc, Zc, **plot_args) 
     return fig, ax
 
+
 def detector_track_intersection(track, radii=range(2,6)):
     # convention: expect x, y coordinates in first two columns of track
     track_radius = np.linalg.norm(track[:, :2], axis=1)
@@ -80,6 +73,7 @@ def detector_track_intersection(track, radii=range(2,6)):
     hit_indices = hit_indices[hit_indices < track.shape[0]]
     hits = track[hit_indices, :3]
     return hits
+
     
 def detector_response(track, radii=range(2,6), sigma=.1):
     hits = detector_track_intersection(track, radii=radii)
@@ -92,22 +86,17 @@ def detector_response(track, radii=range(2,6), sigma=.1):
     hits[:, 2] = hits[:, 2] + noise[:, 2]
     return hits
 
-#http://stackoverflow.com/questions/16422672/halt-scipy-odeint-on-first-error
-def fake_odeint(func, y0, t, Dfun=None):
-    y = []
-    for tt in t:
-        y.append(ig.integrate(tt))
-    return np.array(y)
-
 
 def position_derivative(t, x, B=0.0):
     """
-    For odeint solver. x[:3] is the position and x[3:6] the velocity, using cartesian coordinates.
+    For odeint solver. x[:3] is the position and x[3:6] the velocity,
+    using cartesian coordinates.
     """
-    dx_dp = np.array([x[3], x[4], x[5], #change of position due to velocity
-                      -1 * B * x[4], B * x[3], 0]) # change of velocity due to magnetic field
+    # change of position due to velocity,
+    # change of velocity due to magnetic field
+    dx_dp = np.array([x[3], x[4], x[5], 
+                      -1 * B * x[4], B * x[3], 0]) 
     return dx_dp
-    
 
 
 def propagate(**kwargs):
@@ -120,7 +109,7 @@ def propagate(**kwargs):
     thickness = kwargs.pop('thickness', 0.001) 
     energy_loss = kwargs.pop('energy_loss', 0.1) 
     scattering_angle = kwargs.pop('scattering_angle', 0.01) 
-    # times at which ode will be evaluated
+    # set up ode integrator
     ig = scipy.integrate.ode(position_derivative, Dfun)
     ig.set_integrator('zvode',
                        method='bdf')
