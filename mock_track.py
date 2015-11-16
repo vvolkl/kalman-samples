@@ -1,4 +1,5 @@
 
+from __future__ import print_function
 
 r"""
 MORITAT :: Mock Reconstruction and Pedagogical Tracking
@@ -67,7 +68,7 @@ def rotate(axis, theta):
     return scipy.linalg.expm(np.cross(np.eye(3), axis/scipy.linalg.norm(axis)*theta))
 
 
-def draw_detector(radii=range(2,6)):
+def draw_detector(radii=list(range(2,6))):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     for r in radii:
@@ -87,7 +88,7 @@ def draw_detector(radii=range(2,6)):
     return fig, ax
 
 
-def detector_track_intersection(full_track, radii=range(2,6)):
+def detector_track_intersection(full_track, radii=list(range(2,6))):
     # convention: expect x, y coordinates in first two columns of track
     # np.searchsorted expects data to be ordered
     # so split it into segments that are assumed to be straight
@@ -112,7 +113,7 @@ def detector_track_intersection(full_track, radii=range(2,6)):
     return np.concatenate(result) 
 
     
-def detector_response(track, radii=range(2,6), sigma=.1):
+def detector_response(track, radii=list(range(2,6)), sigma=.1):
     hits = detector_track_intersection(track, radii=radii)
     noise = np.random.normal(loc=0, scale=sigma, size=hits.shape)
     # constrict to detector surfaces, let second column of noise be the angle 
@@ -142,7 +143,7 @@ def propagate(**kwargs):
     p0 = kwargs.pop('p0', [1, 0, 1])
     Dfun = kwargs.pop('Dfun', None)
     time_points = kwargs.pop('time_points', (0.001, 15, 100000))
-    radii = kwargs.pop('radii', range(2,6))
+    radii = kwargs.pop('radii', list(range(2,6)))
     thickness = kwargs.pop('thickness', 0.001) 
     energy_loss = kwargs.pop('energy_loss', 0.00) 
     scattering_angle = kwargs.pop('scattering_angle', 0.00) 
@@ -163,7 +164,7 @@ def propagate(**kwargs):
         for radius in radii:
             if (radius < particle_radius < radius + thickness and
                 time_of_last_collision > 0.01):
-                print 'detector collision...', t, particle_radius
+                print('detector collision...', t, particle_radius)
                 # energy loss proportional to momentum 
                 _dp = particle_state[3:6]
                 _dp = _dp - energy_loss * _dp
@@ -194,7 +195,7 @@ def helix(params, time_points=(0,4,1000)):
     return np.array([x, y, z]).T
 
 
-def helix_at_detector(params, radii=range(2,6)):
+def helix_at_detector(params, radii=list(range(2,6))):
     track = helix(params)
     hits = detector_track_intersection(track, radii=radii)
     return hits

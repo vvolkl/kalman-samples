@@ -1,3 +1,6 @@
+
+from __future__ import print_function
+
 import mock_track as m
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +24,7 @@ for dconf in detector_configurations:
     for pconf in particle_configurations:
         pconf.update(dconf)
         filename = m.construct_filename(pconf)
-        print 'processing track filename ...'
+        print('processing track ', filename, ' ...')
         track = m.propagate(**pconf)
         ax.plot(*track[:, :3].T)
         hits = m.detector_response(track, sigma=0.0001)
