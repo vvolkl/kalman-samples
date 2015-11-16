@@ -14,7 +14,7 @@ ytrue = zeros(1,N);
 ymeas = zeros(1,N);
 sigma = 2;
 for i=1:N
-    ytrue(i) = y0true - (i-1)*g*dt - (i-1)*g*dt^2/2;
+    ytrue(i) = y0true - (i-1)*g*dt - g*((i-1)*dt)^2/2;
     ymeas(i) = normrnd(ytrue(i),sigma);
 end
 
