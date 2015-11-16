@@ -10,7 +10,7 @@ g = 9.81
 dt = 0.2
 ytruth = numpy.zeros(sz)
 for i in range(0,n_iter):
-    ytruth[i] = y0 - g*i*dt - g*i*dt**2/2.
+    ytruth[i] = y0 - g*i*dt - g*(i*dt)**2/2.
 ymeas = numpy.random.normal(ytruth,2) # observations
 
 Q = 0 #1e-5 # process variance
