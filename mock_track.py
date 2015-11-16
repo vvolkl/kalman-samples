@@ -1,4 +1,5 @@
 
+
 r"""
 MORITAT :: Mock Reconstruction and Pedagogical Tracking
 
@@ -30,6 +31,26 @@ from mpl_toolkits.mplot3d import Axes3D
 import scipy.optimize
 import scipy.linalg
 import itertools
+
+def construct_filename(conf):
+    filename = ['track_x_']
+    filename += ['%.4g_' % (d) for d in conf['x0']]
+    filename += ['p_']
+    filename += ['%.4g_' % (d) for d in conf['p0']]
+    filename += ['EnLoss_%.4g_' % conf['energy_loss']]
+    filename += ['ScatAng_%.4g_' % conf['scattering_angle']]
+    filename += ['.dat']
+    return ''.join(filename)
+
+def parse_parameters(filename):
+    conf = {}
+    x0 = filename.split('x0_')[1].split('_p0')[0]
+    conf[ 'x0' ] = [float(f.split('_'))]
+    p0 = filename.split( 'p0_' )[1].split( '_p0' )[0]
+    conf[ 'p0' ] = [float(f.split('_'))]
+    energy_loss = filename.split('energy_loss_')[0].split( '_p0' )[0]
+    conf[ 'energy_loss' ] = float(energy_loss) 
+    return conf
 
 # http://codereview.stackexchange.com/questions/43928
 def perpendicular_vector(v):
@@ -120,7 +141,7 @@ def propagate(**kwargs):
     x0 = kwargs.pop('x0', [0, 0, 0])
     p0 = kwargs.pop('p0', [1, 0, 1])
     Dfun = kwargs.pop('Dfun', None)
-    time_points = kwargs.pop('time_points', (0.001, 40, 100000))
+    time_points = kwargs.pop('time_points', (0.001, 15, 100000))
     radii = kwargs.pop('radii', range(2,6))
     thickness = kwargs.pop('thickness', 0.001) 
     energy_loss = kwargs.pop('energy_loss', 0.00) 
@@ -155,7 +176,7 @@ def propagate(**kwargs):
     return np.array(result)
 
 
-def helix(params, time_points=(0,10,1000)):
+def helix(params, time_points=(0,4,1000)):
     path_points = np.linspace(*time_points)
     d0, z0, phi0, cotTheta, q_pT = params
     # motion in z linear, unchanged by magnetic field in z
@@ -180,7 +201,12 @@ def helix_at_detector(params, radii=range(2,6)):
     
 
 def helix_residuals(params, measurements):
-    return (helix_at_detector(params) - measurements).flatten()
+    m_shape = measurements.shape
+    h = helix_at_detector(params)
+    g = np.zeros(measurements.shape)
+    minh = min(h.shape[0], g.shape[0])
+    g[:minh] = h[:minh]
+    return (g - measurements).flatten()
 
 
 def fit_parameters(hits, x0):
