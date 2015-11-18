@@ -15,7 +15,7 @@ def kalman_predict( A, # transition matrix
         # prediction: recursive formula
         xpredict[:, i] = np.dot(A, xkal[:, i - 1])
         # predict covariance  
-        #p = A*p*A.T
+        p = A*p*A.T
         # construct kalman gain matrix according to prediction equations
         # higher gain leads to higher influence of measurement,
         # lower gain to higher influence of predicion
