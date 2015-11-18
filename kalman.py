@@ -15,7 +15,7 @@ def kalman_predict( A, # transition matrix
         # prediction: recursive formula
         xpredict[:, i] = np.dot(A, xkal[:, i - 1])
         # predict covariance  
-        p = A*p*A.T
+        #p = A*p*A.T
         # construct kalman gain matrix according to prediction equations
         # higher gain leads to higher influence of measurement,
         # lower gain to higher influence of predicion
@@ -23,7 +23,7 @@ def kalman_predict( A, # transition matrix
         # construct estimate from prediction and gain 
         xkal[:, i] = xpredict[:, i] + K*(xmeas[:, i] - H*xpredict[:, i])
         # update covariance with gain
-        p = (np.identity(K.shape[0]) - K) * p
+        p = (np.identity(K.shape[0]) - K * H) * p
     return xkal, xpredict
 
 def plot_results(xkal, xpredict, xmeas, xtrue):
@@ -38,8 +38,8 @@ def plot_results(xkal, xpredict, xmeas, xtrue):
 
     fig2 = plt.figure()
     ax2 = plt.axes()
-    plt.axhline(v)
-    #plt.axhline(np.mean(xmeas[1]))
+    #plt.axhline(v)
+    plt.axhline(np.mean(xmeas[1]))
     plt.plot(xpredict[1].T, 'g.',  label = 'Prediction')
     plt.plot(xmeas[1].T, 'rx', label = 'Measurement')
     plt.plot(xkal[1].T, 'ko', label = 'Kalman')
