@@ -30,7 +30,7 @@ def plot_results(xkal, xpredict, xmeas, xtrue):
     fig1 = plt.figure()
     ax1 = plt.axes()
     plt.plot(xtrue, 'b-', label = 'True')
-    plt.plot(xmeas[0].T, 'rx', label = 'Measuement')
+    plt.plot(xmeas[0].T, 'rx', label = 'Measurement')
     plt.plot(xpredict[0].T, 'g.',  label = 'Prediction')
     plt.plot(xkal[0].T, 'ko', label = 'Kalman')
     plt.xlabel('Iteration')
